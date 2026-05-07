@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="theme-color" content="#050810"/>
+  <meta name="description" content="PGI Medical Quiz — NEET PG / INI-CET Multi-Subject Platform"/>
+  <title>PGI Medical Quiz</title>
+  <link rel="manifest" href="./manifest.json"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --bg:          #050810;
+      --bg-mid:      #080d1a;
+      --card:        rgba(255,255,255,0.04);
+      --card-hover:  rgba(255,255,255,0.07);
+      --border:      rgba(255,255,255,0.08);
+      --blue:        #4fc3f7;
+      --purple:      #a78bfa;
+      --cyan:        #22d3ee;
+      --green:       #4ade80;
+      --red:         #f87171;
+      --amber:       #fbbf24;
+      --pink:        #f472b6;
+      --text:        #f0f4ff;
+      --text2:       #8892a4;
+      --text3:       #4a5568;
+      --font:        'Outfit', sans-serif;
+      --mono:        'JetBrains Mono', monospace;
+      --r-sm:8px; --r-md:16px; --r-lg:24px;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+    ::-webkit-scrollbar{width:5px}
+    ::-webkit-scrollbar-track{background:var(--bg)}
+    ::-webkit-scrollbar-thumb{background:rgba(79,195,247,.3);border-radius:99px}
+
+    /* BG */
+    .bg-glow{position:fixed;inset:0;z-index:0;pointer-events:none;
+      background:radial-gradient(ellipse 80% 50% at 20% 0%,rgba(79,195,247,.06),transparent 60%),
+                radial-gradient(ellipse 60% 40% at 80% 100%,rgba(167,139,250,.06),transparent 60%)}
+    .grid-bg{position:fixed;inset:0;z-index:0;pointer-events:none;
+      background-image:linear-gradient(rgba(79,195,247,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(79,195,247,.025) 1px,transparent 1px);
+      background-size:60px 60px;mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black,transparent 80%)}
+
+    #app{position:relative;z-index:1}
+    .wrap{max-width:900px;margin:0 auto;padding:0 18px}
+    .wrap-wide{max-width:1100px;margin:0 auto;padding:0 18px}
+
+    /* GLASS */
+    .glass{background:var(--card);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:0 8px 32px rgba(0,0,0,.5);transition:border-color .2s}
+    .glass:hover{border-color:rgba(255,255,255,.12)}
+    .glass-glow{background:var(--card);backdrop-filter:blur(20px);border:1px solid rgba(79,195,247,.2);border-radius:var(--r-lg);box-shadow:0 8px 32px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.06)}
+
+    /* SCREENS */
+    .screen{display:none;animation:fadeUp .35s ease}
+    .screen.active{display:block}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+
+    /* PROGRESS */
+    #prog-wrap{position:sticky;top:0;z-index:100;padding:10px 0 0;background:linear-gradient(to bottom,var(--bg) 60%,transparent);display:none}
+    .prog-track{height:3px;background:rgba(255,255,255,.06);border-radius:99px;overflow:hidden}
+    .prog-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--purple));border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1);box-shadow:0 0 10px rgba(79,195,247,.4)}
+    .prog-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--text2);padding:6px 0 8px;font-weight:500}
+    .prog-meta .qc{font-family:var(--mono);color:var(--blue)}
+
+    /* NAV */
+    #top-nav{display:flex;align-items:center;justify-content:space-between;padding:18px 0 10px}
+    .logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:800;letter-spacing:-.5px}
+    .logo-ico{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--purple));display:flex;align-items:center;justify-content:center;font-size:18px}
+    .logo span{color:var(--blue)}
+
+    /* BTN */
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r-sm);font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;border:none;transition:all .2s;text-decoration:none;white-space:nowrap}
+    .btn-p{background:linear-gradient(135deg,var(--blue),rgba(79,195,247,.7));color:#000;box-shadow:0 4px 15px rgba(79,195,247,.3)}
+    .btn-p:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(79,195,247,.45)}
+    .btn-a{background:linear-gradient(135deg,var(--purple),rgba(167,139,250,.7));color:#fff;box-shadow:0 4px 15px rgba(167,139,250,.25)}
+    .btn-a:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(167,139,250,.4)}
+    .btn-g{background:transparent;color:var(--text2);border:1px solid var(--border)}
+    .btn-g:hover{background:var(--card);color:var(--text);border-color:rgba(255,255,255,.15)}
+    .btn-danger{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.25)}
+    .btn-danger:hover{background:rgba(248,113,113,.22)}
+    .btn-success{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.25)}
+    .btn-lg{padding:13px 26px;font-size:15px;border-radius:var(--r-md)}
+    .btn-sm{padding:5px 11px;font-size:11px}
+    .btn-ico{padding:8px;border-radius:var(--r-sm);min-width:36px;justify-content:center}
+    .btn:active{transform:scale(.97)}
+    .btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+    /* SUBJECT GRID */
+    .subj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:28px}
+    .subj-card{padding:18px 16px;border-radius:var(--r-md);border:1.5px solid var(--border);background:rgba(255,255,255,.025);cursor:pointer;transition:all .25s;position:relative;overflow:hidden}
+    .subj-card:hover{border-color:rgba(255,255,255,.15);transform:translateY(-2px);background:rgba(255,255,255,.05)}
+    .subj-card.active-subj{border-color:var(--s-color,var(--blue));background:rgba(79,195,247,.06);box-shadow:0 0 20px rgba(79,195,247,.08)}
+    .subj-card .s-icon{font-size:24px;margin-bottom:10px}
+    .subj-card .s-name{font-size:13px;font-weight:700;margin-bottom:4px}
+    .subj-card .s-count{font-size:11px;color:var(--text3);font-family:var(--mono)}
+    .subj-dot{width:8px;height:8px;border-radius:50%;position:absolute;top:12px;right:12px;background:var(--s-color,var(--blue));opacity:0;transition:opacity .2s}
+    .subj-card.active-subj .subj-dot{opacity:1}
+
+    /* TABS */
+    .tabs{display:flex;gap:4px;background:rgba(255,255,255,.04);border-radius:var(--r-sm);padding:4px;margin-bottom:20px}
+    .tab{flex:1;padding:8px 12px;border-radius:6px;border:none;background:transparent;color:var(--text2);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;text-align:center}
+    .tab.on{background:rgba(79,195,247,.12);color:var(--blue);border:1px solid rgba(79,195,247,.2)}
+
+    /* MODE CARDS */
+    .mode-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+    .mode-card{padding:20px 16px;border-radius:var(--r-md);border:1.5px solid var(--border);background:rgba(255,255,255,.025);cursor:pointer;transition:all .25s;position:relative}
+    .mode-card:hover{border-color:rgba(255,255,255,.15);transform:translateY(-2px)}
+    .mode-card.sel{border-color:var(--mc,var(--blue));background:rgba(79,195,247,.06)}
+    .mode-card .mi{font-size:24px;margin-bottom:10px}
+    .mode-card .mn{font-size:14px;font-weight:700;margin-bottom:4px}
+    .mode-card .md{font-size:11px;color:var(--text2);line-height:1.5}
+    .m-chk{position:absolute;top:10px;right:10px;width:18px;height:18px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;transition:all .2s}
+    .mode-card.sel .m-chk{background:var(--mc,var(--blue));border-color:var(--mc,var(--blue))}
+    .m-chk svg{display:none}
+    .mode-card.sel .m-chk svg{display:block}
+
+    /* SETTINGS */
+    .settings-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+    .sg{flex:1;min-width:130px}
+    .sg label{display:block;font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px}
+    select.sel-box{width:100%;padding:9px 32px 9px 12px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:var(--font);font-size:13px;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%238892a4' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;transition:border-color .2s}
+    select.sel-box:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(79,195,247,.1)}
+    select.sel-box option{background:#0d1626}
+
+    /* TOGGLE */
+    .tog-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+    .tog-row:last-child{border-bottom:none}
+    .tog-label{font-size:13px;font-weight:500}
+    .tog-sub{font-size:10px;color:var(--text3);margin-top:2px}
+    .tog{width:38px;height:21px;border-radius:99px;background:rgba(255,255,255,.1);border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+    .tog::after{content:'';position:absolute;width:15px;height:15px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform .2s}
+    .tog.on{background:var(--blue)}
+    .tog.on::after{transform:translateX(17px)}
+
+    /* SEARCH */
+    .srch-wrap{position:relative;margin-bottom:16px}
+    .srch-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none}
+    .srch-inp{width:100%;padding:11px 14px 11px 40px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--r-md);color:var(--text);font-family:var(--font);font-size:13px;transition:all .2s}
+    .srch-inp::placeholder{color:var(--text3)}
+    .srch-inp:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(79,195,247,.08)}
+
+    /* QUIZ HEADER */
+    .qhdr{display:flex;justify-content:space-between;align-items:center;padding:14px 0 10px;gap:10px;flex-wrap:wrap}
+    .qmeta{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+    .tag{padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;letter-spacing:.3px}
+    .tag-t{background:rgba(79,195,247,.1);color:var(--blue);border:1px solid rgba(79,195,247,.18)}
+    .tag-s{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.18)}
+    .tag-m{background:rgba(251,191,36,.1);color:var(--amber);border:1px solid rgba(251,191,36,.18)}
+    .tag-subj{background:rgba(34,211,238,.1);color:var(--cyan);border:1px solid rgba(34,211,238,.18)}
+
+    /* TIMER */
+    .timer{font-family:var(--mono);font-size:13px;font-weight:600;padding:5px 13px;border-radius:var(--r-sm);background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--text);transition:all .3s}
+    .timer.warn{color:var(--amber);border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.07)}
+    .timer.danger{color:var(--red);border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.07);animation:pulse 1s ease infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+
+    /* STATS STRIP */
+    .stats-strip{display:flex;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;margin-bottom:16px}
+    .sp{flex:1;text-align:center;padding:11px 6px;border-right:1px solid var(--border)}
+    .sp:last-child{border-right:none}
+    .sp-n{font-family:var(--mono);font-size:17px;font-weight:700;line-height:1}
+    .sp-l{font-size:10px;color:var(--text3);margin-top:3px;font-weight:500;letter-spacing:.3px}
+    .sp.c .sp-n{color:var(--green)}
+    .sp.w .sp-n{color:var(--red)}
+    .sp.b .sp-n{color:var(--blue)}
+
+    /* QUESTION CARD */
+    .q-card{padding:28px;margin-bottom:14px;position:relative}
+    .q-num{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+    .q-num::after{content:'';flex:1;height:1px;background:linear-gradient(to right,var(--border),transparent)}
+    .q-text{font-size:clamp(15px,2.5vw,19px);font-weight:600;line-height:1.6;color:var(--text);margin-bottom:6px}
+    .multi-hint{font-size:11px;color:var(--amber);font-weight:500;display:flex;align-items:center;gap:4px;margin-top:8px}
+
+    /* OPTIONS */
+    .opts{display:flex;flex-direction:column;gap:9px;margin-bottom:18px}
+    .opt{display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:var(--r-md);background:rgba(255,255,255,.03);border:1.5px solid var(--border);cursor:pointer;text-align:left;transition:all .2s;font-family:var(--font);font-size:13px;color:var(--text);width:100%;font-weight:400;line-height:1.5;position:relative;overflow:hidden}
+    .opt::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--blue);transform:scaleY(0);transition:transform .2s;border-radius:99px 0 0 99px}
+    .opt:hover:not(:disabled){border-color:rgba(79,195,247,.35);background:rgba(79,195,247,.04);transform:translateX(2px)}
+    .opt:hover:not(:disabled)::before{transform:scaleY(1)}
+    .opt:disabled{cursor:default;transform:none}
+    .opt-let{width:26px;height:26px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:7px;font-size:11px;font-weight:700;background:rgba(255,255,255,.06);border:1px solid var(--border);font-family:var(--mono);transition:all .2s}
+    .opt-txt{flex:1}
+    .opt-ico{width:18px;height:18px;flex-shrink:0;opacity:0;transition:opacity .2s}
+    /* Selected */
+    .opt.sel{border-color:var(--blue);background:rgba(79,195,247,.07)}
+    .opt.sel .opt-let{background:var(--blue);border-color:var(--blue);color:#000}
+    .opt.sel::before{transform:scaleY(1)}
+    /* Correct */
+    .opt.correct{border-color:var(--green)!important;background:rgba(74,222,128,.07)!important;animation:cPulse .4s ease}
+    .opt.correct .opt-let{background:var(--green)!important;border-color:var(--green)!important;color:#000!important}
+    .opt.correct .opt-ico{opacity:1;color:var(--green)}
+    .opt.correct::before{background:var(--green)!important;transform:scaleY(1)}
+    @keyframes cPulse{0%{transform:scale(1)}50%{transform:scale(1.01)}100%{transform:scale(1)}}
+    /* Wrong */
+    .opt.wrong{border-color:var(--red)!important;background:rgba(248,113,113,.07)!important;animation:shake .4s ease}
+    .opt.wrong .opt-let{background:var(--red)!important;border-color:var(--red)!important;color:#fff!important}
+    .opt.wrong .opt-ico{opacity:1;color:var(--red)}
+    .opt.wrong::before{background:var(--red)!important;transform:scaleY(1)}
+    @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-2px)}80%{transform:translateX(2px)}}
+    .opt.dim{opacity:.3}
+
+    /* EXPLANATION */
+    .exp-card{padding:22px 26px;margin-bottom:14px;border-left:3px solid var(--blue);background:rgba(79,195,247,.035);border-radius:0 var(--r-md) var(--r-md) 0;display:none;animation:slideDown .3s ease}
+    .exp-card.show{display:block}
+    @keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+    .exp-hdr{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+    .exp-txt{font-size:13px;color:var(--text2);line-height:1.75;white-space:pre-wrap}
+    .exp-card.wrong-exp{border-color:var(--red);background:rgba(248,113,113,.035)}
+    .exp-card.wrong-exp .exp-hdr{color:var(--red)}
+
+    /* ACTIONS */
+    .q-actions{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .q-actions-l,.q-actions-r{display:flex;gap:7px}
+
+    /* RESULTS */
+    .res-hero{text-align:center;padding:36px 0 28px}
+    .res-score{font-size:72px;font-weight:800;font-family:var(--mono);line-height:1;background:linear-gradient(135deg,var(--green),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .res-badge{display:inline-block;padding:5px 18px;border-radius:99px;font-size:13px;font-weight:700;margin-top:14px}
+    .b-ex{background:rgba(74,222,128,.12);color:var(--green);border:1px solid rgba(74,222,128,.25)}
+    .b-gd{background:rgba(79,195,247,.12);color:var(--blue);border:1px solid rgba(79,195,247,.25)}
+    .b-av{background:rgba(251,191,36,.12);color:var(--amber);border:1px solid rgba(251,191,36,.25)}
+    .b-po{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.25)}
+
+    /* CHART */
+    .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+    .chart-card{padding:20px}
+    .chart-title{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
+
+    /* BOOKMARKS */
+    .bm-item{padding:18px 22px;display:flex;align-items:flex-start;gap:14px;cursor:pointer;transition:border-color .2s;margin-bottom:10px}
+    .bm-item:hover{border-color:rgba(255,255,255,.12)}
+    .bm-num{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--blue);padding:3px 7px;background:rgba(79,195,247,.1);border-radius:6px;flex-shrink:0}
+    .bm-q{font-size:13px;font-weight:500;line-height:1.5;flex:1}
+    .bm-meta{font-size:10px;color:var(--text3);margin-top:3px}
+
+    /* BOTTOM NAV */
+    #bnav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(5,8,16,.92);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:7px 0 11px}
+    .nb{display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 14px;border:none;background:transparent;cursor:pointer;color:var(--text3);font-family:var(--font);font-size:10px;font-weight:600;border-radius:var(--r-sm);letter-spacing:.3px;transition:color .2s}
+    .nb svg{width:20px;height:20px;transition:transform .2s}
+    .nb:hover{color:var(--text2)}
+    .nb:hover svg{transform:translateY(-2px)}
+    .nb.on{color:var(--blue)}
+
+    /* TOAST */
+    #toast{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);z-index:2000;pointer-events:none}
+    .t-msg{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border-radius:var(--r-md);font-size:12px;font-weight:600;backdrop-filter:blur(20px);border:1px solid;animation:tIn .3s ease,tOut .3s ease 2.4s forwards}
+    @keyframes tIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes tOut{from{opacity:1}to{opacity:0}}
+    .t-s{background:rgba(74,222,128,.12);border-color:rgba(74,222,128,.25);color:var(--green)}
+    .t-i{background:rgba(79,195,247,.12);border-color:rgba(79,195,247,.25);color:var(--blue)}
+    .t-e{background:rgba(248,113,113,.12);border-color:rgba(248,113,113,.25);color:var(--red)}
+
+    /* HOME STATS */
+    .home-stats{display:flex;justify-content:center;gap:28px;flex-wrap:wrap;margin-bottom:40px}
+    .hs{text-align:center}
+    .hs-n{font-size:26px;font-weight:800;font-family:var(--mono);color:var(--blue);line-height:1}
+    .hs-l{font-size:11px;color:var(--text3);margin-top:3px;font-weight:500}
+
+    /* DIVIDER */
+    .divider{height:1px;background:var(--border);margin:18px 0}
+    .section-title{font-size:20px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+    .empty-state{text-align:center;padding:50px 20px;color:var(--text3)}
+    .empty-ico{font-size:44px;margin-bottom:14px;opacity:.5}
+    .empty-txt{font-size:15px;font-weight:500}
+    .empty-sub{font-size:12px;margin-top:6px}
+
+    /* KBD */
+    .kbd-hint{font-size:10px;color:var(--text3);display:flex;gap:10px;flex-wrap:wrap}
+    .key{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:4px;padding:1px 5px;font-family:var(--mono);font-size:9px;color:var(--text2);font-weight:600}
+
+    /* CONFETTI */
+    @keyframes cFall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}
+
+    /* RESPONSIVE */
+    @media(max-width:600px){
+      .chart-grid{grid-template-columns:1fr}
+      .q-actions{flex-direction:column-reverse}
+      .q-actions-l,.q-actions-r{width:100%;justify-content:center}
+      .subj-grid{grid-template-columns:repeat(2,1fr)}
+      .mode-grid{grid-template-columns:repeat(2,1fr)}
+      .settings-row{flex-direction:column}
+      .stats-strip{flex-wrap:wrap}
+      .sp{min-width:50%;border-right:none;border-bottom:1px solid var(--border)}
+    }
+    @media(max-width:380px){.subj-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<div class="grid-bg"></div>
+
+<div id="app">
+
+  <!-- PROGRESS BAR -->
+  <div id="prog-wrap" class="wrap">
+    <div class="prog-meta">
+      <span class="qc" id="prog-counter">1 / 0</span>
+      <span id="prog-pct" style="font-size:10px;color:var(--text3)">0%</span>
+    </div>
+    <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+
+  <!-- TOP NAV -->
+  <div class="wrap">
+    <nav id="top-nav">
+      <div class="logo">
+        <div class="logo-ico">🏥</div>
+        <span>PGI <span>Medical</span></span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-g btn-sm" onclick="clearProgress()">Reset</button>
+      </div>
+    </nav>
+  </div>
+
+  <!-- ══ HOME ══════════════════════════════════════════════ -->
+  <div id="screen-home" class="screen active">
+    <div class="wrap" style="padding-bottom:100px">
+
+      <!-- Hero -->
+      <div style="text-align:center;padding:40px 0 32px">
+        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(79,195,247,.09);border:1px solid rgba(79,195,247,.18);color:var(--blue);border-radius:99px;padding:5px 14px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:20px">🏥 NEET PG · INI-CET · PGI</div>
+        <h1 style="font-size:clamp(32px,7vw,60px);font-weight:800;line-height:1.1;letter-spacing:-2px;background:linear-gradient(135deg,#fff 30%,var(--blue) 65%,var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:14px">Master Every Subject</h1>
+        <p style="font-size:16px;color:var(--text2);max-width:440px;margin:0 auto 32px;line-height:1.6" id="hero-sub">1375 curated MCQs across 11 subjects with full explanations.</p>
+        <div class="home-stats">
+          <div class="hs"><div class="hs-n" id="hs-total">1375</div><div class="hs-l">Questions</div></div>
+          <div class="hs"><div class="hs-n" id="hs-subjects">11</div><div class="hs-l">Subjects</div></div>
+          <div class="hs"><div class="hs-n" id="hs-attempted">0</div><div class="hs-l">Attempted</div></div>
+          <div class="hs"><div class="hs-n" id="hs-accuracy">—</div><div class="hs-l">Accuracy</div></div>
+          <div class="hs"><div class="hs-n" id="hs-bookmarks">0</div><div class="hs-l">Bookmarks</div></div>
+        </div>
+      </div>
+
+      <!-- Search -->
+      <div class="srch-wrap">
+        <span class="srch-ico"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></span>
+        <input class="srch-inp" id="srch" type="text" placeholder="Search questions across all subjects…" oninput="doSearch(this.value)" autocomplete="off"/>
+      </div>
+      <div id="srch-results"></div>
+
+      <!-- Subject Selector -->
+      <div class="section-title"><span>📚</span> Select Subject</div>
+      <div class="subj-grid" id="subj-grid"><!-- filled by JS --></div>
+
+      <!-- Mode -->
+      <div class="section-title"><span>🎯</span> Quiz Mode</div>
+      <div class="mode-grid">
+        <div class="mode-card sel" data-mode="practice" style="--mc:#4fc3f7">
+          <div class="m-chk"><svg width="9" height="9" fill="none" stroke="#000" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
+          <div class="mi">🎯</div><div class="mn">Practice</div>
+          <div class="md">Instant feedback. Best for learning new topics.</div>
+        </div>
+        <div class="mode-card" data-mode="exam" style="--mc:#a78bfa">
+          <div class="m-chk"><svg width="9" height="9" fill="none" stroke="#fff" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
+          <div class="mi">📝</div><div class="mn">Exam</div>
+          <div class="md">No answers until the end. Real exam simulation.</div>
+        </div>
+        <div class="mode-card" data-mode="revision" style="--mc:#4ade80">
+          <div class="m-chk"><svg width="9" height="9" fill="none" stroke="#000" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
+          <div class="mi">🔁</div><div class="mn">Revision</div>
+          <div class="md">Only your previously wrong answers.</div>
+        </div>
+        <div class="mode-card" data-mode="random" style="--mc:#fbbf24">
+          <div class="m-chk"><svg width="9" height="9" fill="none" stroke="#000" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg></div>
+          <div class="mi">🎲</div><div class="mn">Random</div>
+          <div class="md">Shuffled questions across selected subjects.</div>
+        </div>
+      </div>
+
+      <!-- Settings -->
+      <div class="glass" style="padding:22px;margin-bottom:20px">
+        <div style="font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:7px">⚙️ Filters & Settings</div>
+        <div class="settings-row">
+          <div class="sg">
+            <label>Topic Filter</label>
+            <select id="fil-topic" class="sel-box"><option value="all">All Topics</option></select>
+          </div>
+          <div class="sg">
+            <label>Difficulty</label>
+            <select id="fil-diff" class="sel-box">
+              <option value="all">All Levels</option>
+              <option value="Easy">Easy</option>
+              <option value="Medium">Medium</option>
+              <option value="Hard">Hard</option>
+            </select>
+          </div>
+          <div class="sg">
+            <label>Max Questions</label>
+            <select id="fil-max" class="sel-box">
+              <option value="all">All</option>
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="30">30</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="divider" style="margin:12px 0"></div>
+
+        <div class="tog-row">
+          <div><div class="tog-label">⏱ Timer</div><div class="tog-sub">Per question countdown</div></div>
+          <button class="tog" id="tog-timer"></button>
+        </div>
+        <div id="timer-cfg" style="display:none;padding:10px 0 4px">
+          <div class="settings-row">
+            <div class="sg">
+              <label>Seconds / Question</label>
+              <select id="timer-secs" class="sel-box">
+                <option value="30">30s</option><option value="60" selected>60s</option>
+                <option value="90">90s</option><option value="120">2 min</option><option value="180">3 min</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="tog-row">
+          <div><div class="tog-label">🔊 Sound Effects</div><div class="tog-sub">Chime on correct / buzz on wrong</div></div>
+          <button class="tog" id="tog-sound"></button>
+        </div>
+      </div>
+
+      <!-- Start -->
+      <div style="text-align:center;padding-bottom:20px">
+        <button class="btn btn-p btn-lg" onclick="startQuiz()" style="min-width:200px;font-size:16px">🚀 Start Quiz</button>
+        <div class="kbd-hint" style="justify-content:center;margin-top:14px">
+          <span><span class="key">A–E</span> select</span>
+          <span><span class="key">Enter</span> submit/next</span>
+          <span><span class="key">B</span> bookmark</span>
+          <span><span class="key">←→</span> prev/next</span>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /HOME -->
+
+  <!-- ══ QUIZ ═══════════════════════════════════════════════ -->
+  <div id="screen-quiz" class="screen">
+    <div class="wrap" style="padding-bottom:80px">
+
+      <div class="qhdr">
+        <div class="qmeta">
+          <span class="tag tag-subj" id="q-subj">—</span>
+          <span class="tag tag-t" id="q-topic">—</span>
+          <span class="tag tag-s" id="q-mode">—</span>
+          <span class="tag tag-m" id="q-multi" style="display:none">☑ Multi-select</span>
+        </div>
+        <div style="display:flex;gap:7px;align-items:center">
+          <div id="q-timer" class="timer" style="display:none">01:00</div>
+          <button class="btn btn-g btn-sm" onclick="showScreen('home')">✕ Exit</button>
+        </div>
+      </div>
+
+      <div class="stats-strip">
+        <div class="sp c"><div class="sp-n" id="ss-correct">0</div><div class="sp-l">Correct</div></div>
+        <div class="sp w"><div class="sp-n" id="ss-wrong">0</div><div class="sp-l">Wrong</div></div>
+        <div class="sp b"><div class="sp-n" id="ss-remain">—</div><div class="sp-l">Left</div></div>
+        <div class="sp"><div class="sp-n" id="ss-pct">—</div><div class="sp-l">Accuracy</div></div>
+      </div>
+
+      <div class="glass glass-glow q-card">
+        <div class="q-num" id="q-num">Q1</div>
+        <div class="q-text" id="q-text">Loading…</div>
+        <div class="multi-hint" id="q-multi-hint" style="display:none">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+          Select ALL correct answers
+        </div>
+      </div>
+
+      <div class="opts" id="opts-grid"></div>
+
+      <div id="correct-line" style="display:none;font-size:12px;color:var(--green);font-weight:600;margin-bottom:10px;padding:0 4px"></div>
+
+      <!-- Explanation card — shown after submit -->
+      <div class="glass exp-card" id="exp-card">
+        <div class="exp-hdr">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>
+          Explanation
+        </div>
+        <div class="exp-txt" id="exp-txt"></div>
+      </div>
+
+      <!-- Dedicated Bookmark Button Row -->
+      <div style="margin-bottom:14px">
+        <button id="btn-bm" onclick="toggleBM(curQ()?.gid)"
+          style="width:100%;padding:13px 20px;border-radius:var(--r-md);
+                 border:1.5px dashed rgba(251,191,36,0.35);background:rgba(251,191,36,0.05);
+                 color:var(--amber);font-family:var(--font);font-size:14px;font-weight:600;
+                 cursor:pointer;transition:all 0.2s;display:flex;align-items:center;
+                 justify-content:center;gap:8px;letter-spacing:0.3px">
+          <span id="bm-star-icon">☆</span>
+          <span id="bm-btn-label">Save to Bookmarks</span>
+        </button>
+      </div>
+
+      <!-- Nav Actions -->
+      <div class="q-actions">
+        <div class="q-actions-l">
+          <button class="btn btn-g btn-sm" onclick="prevQ()">← Prev</button>
+          <button class="btn btn-g btn-sm" onclick="skipQ()">Skip →</button>
+        </div>
+        <div class="q-actions-r">
+          <button class="btn btn-p" id="btn-submit" onclick="submitAns()" disabled>Submit</button>
+          <button class="btn btn-a" id="btn-next" onclick="nextQ()" style="display:none">Next →</button>
+        </div>
+      </div>
+
+      <div class="kbd-hint" style="justify-content:flex-end;margin-top:10px">
+        <span><span class="key">A–E</span> select</span>
+        <span><span class="key">Enter</span> submit/next</span>
+        <span><span class="key">←→</span> nav</span>
+        <span><span class="key">B</span> bookmark</span>
+      </div>
+    </div>
+  </div><!-- /QUIZ -->
+
+  <!-- ══ RESULTS ════════════════════════════════════════════ -->
+  <div id="screen-results" class="screen">
+    <div class="wrap" style="padding-bottom:100px">
+      <div class="res-hero">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:6px">Session Complete 🎉</div>
+        <div class="res-score" id="res-score">—</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:6px">Overall Score</div>
+        <div class="res-badge b-gd" id="res-badge">Good Job!</div>
+      </div>
+
+      <div class="stats-strip" style="margin-bottom:20px">
+        <div class="sp c"><div class="sp-n" id="res-correct">0</div><div class="sp-l">Correct</div></div>
+        <div class="sp w"><div class="sp-n" id="res-wrong">0</div><div class="sp-l">Wrong</div></div>
+        <div class="sp"><div class="sp-n" id="res-skip">0</div><div class="sp-l">Skipped</div></div>
+        <div class="sp b"><div class="sp-n" id="res-total">0</div><div class="sp-l">Total</div></div>
+        <div class="sp"><div class="sp-n" id="res-time">—</div><div class="sp-l">Time</div></div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="glass chart-card"><div class="chart-title">📊 Topic Accuracy</div><div style="height:200px"><canvas id="ch-topic"></canvas></div></div>
+        <div class="glass chart-card"><div class="chart-title">🎯 Score Breakdown</div><div style="height:200px"><canvas id="ch-pie"></canvas></div></div>
+      </div>
+
+      <div class="glass" style="padding:22px;margin-bottom:20px">
+        <div style="font-size:14px;font-weight:700;margin-bottom:14px">📥 Export PDF</div>
+        <div style="display:flex;gap:9px;flex-wrap:wrap">
+          <button class="btn btn-danger btn-sm" onclick="exportPDF('wrong')">📕 Wrong Questions</button>
+          <button class="btn btn-g btn-sm" onclick="exportPDF('bookmarked')">⭐ Bookmarked</button>
+          <button class="btn btn-a btn-sm" onclick="exportPDF('revision')">📋 Top 20 Revision</button>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-p btn-lg" onclick="startQuiz()" style="flex:1;min-width:140px">🔁 Retry</button>
+        <button class="btn btn-g btn-lg" onclick="showScreen('home');renderHome()" style="flex:1;min-width:140px">🏠 Home</button>
+      </div>
+    </div>
+  </div><!-- /RESULTS -->
+
+  <!-- ══ BOOKMARKS ══════════════════════════════════════════ -->
+  <div id="screen-bookmarks" class="screen">
+    <div class="wrap" style="padding-top:22px;padding-bottom:100px">
+      <div class="section-title">⭐ Saved Questions</div>
+      <div id="bm-list"></div>
+    </div>
+  </div>
+
+  <!-- ══ ANALYTICS ══════════════════════════════════════════ -->
+  <div id="screen-analytics" class="screen">
+    <div class="wrap" style="padding-top:22px;padding-bottom:100px">
+      <div class="section-title">📊 Performance Analytics</div>
+      <div id="analytics-body"></div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- BOTTOM NAV -->
+<nav id="bnav">
+  <button class="nb on" data-scr="home">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1V10"/></svg>
+    Home
+  </button>
+  <button class="nb" data-scr="bookmarks">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+    Saved
+  </button>
+  <button class="nb" data-scr="analytics">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+    Analytics
+  </button>
+</nav>
+
+<div id="toast"></div>
+
+<script src="./app.js"></script>
+</body>
+</html>
